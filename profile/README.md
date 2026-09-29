@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" />
   <br/>
   <img src="https://img.shields.io/badge/Flyway-CC0200?style=for-the-badge&logo=flyway&logoColor=white" />
-  <img src="https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=prometheus&logoColor=white" />
+  <img src="https://img.shields.io/badge/CloudWatch-FF4F8B?style=for-the-badge&logo=amazoncloudwatch&logoColor=white" />
   <img src="https://img.shields.io/badge/Let's_Encrypt-003A70?style=for-the-badge&logo=letsencrypt&logoColor=white" />
 </p>
 
@@ -34,13 +34,13 @@ GitHub URL + 인증 정보 입력
 
 ## 핵심 모듈
 
-| 모듈 | 내용 |
-|---|---|
-| **CI / CD** | GitHub 레포를 클론해 이미지를 빌드하고 EC2에 배포해요. 블루-그린 · 카나리 방식으로 무중단 전환하고, 문제가 생기면 자동 롤백해요. |
-| **DB Migration** | 배포할 때 스키마 변경을 자동으로 적용해서, 새 버전과 DB 상태가 항상 맞도록 해요. |
-| **Load Balancing** | Nginx로 인스턴스 간 트래픽을 나누고, 헬스체크에 실패한 인스턴스는 자동으로 제외해요. |
-| **Logging** | 배포 · 운영 로그를 한곳에 모아, 장애가 났을 때 원인을 빠르게 추적할 수 있게 해요. |
-| **Monitoring** | CPU · 메모리 · 요청 · 에러율 같은 메트릭을 수집해 대시보드로 보여줘요. |
+| 모듈 | 내용 | 담당 |
+|---|---|---|
+| **CI / CD Module** | 블루-그린 / 카나리 배포 | 이현수, 박준석 |
+| **Database Migration Module** | 무중단 스키마 변경 | 이현수, 박준석 |
+| **Logging Module** | 로그 기록 · 위험도 판정 · 저장 · 롤백 | 심형규, 최도일 |
+| **Monitoring System** | CloudWatch 기반 CPU / 메모리 지표 수집 및 시각화 | 심형규, 최도일 |
+| **Load Balancing** | Nginx 기반 트래픽 분산 (다수 컨테이너 운영으로 비용 효율화) | 이도현, 차주혜 |
 
 ## 확장 계획 (AI)
 
@@ -66,9 +66,9 @@ GitHub URL + 인증 정보 입력
 
 | 이름 | Role | 담당 모듈 |
 |---|---|---|
-| 최도일 | 팀장 | Monitoring · Dashboard |
-| 심형규 | 팀원 | Monitoring · Dashboard |
+| 최도일 | 팀장 | Logging · Monitoring |
+| 심형규 | 팀원 | Logging · Monitoring |
 | 박준석 | 팀원 | CI / CD · DB Migration |
 | 이현수 | 팀원 | CI / CD · DB Migration |
-| 이도현 | 팀원 | Load Balancing · Logging |
-| 차주혜 | 팀원 | Load Balancing · Logging |
+| 이도현 | 팀원 | Load Balancing |
+| 차주혜 | 팀원 | Load Balancing |
