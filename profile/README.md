@@ -6,7 +6,7 @@ SoftBank Hackathon 2026 in Korea 예선 (Term1)
 
 ![](https://img.shields.io/badge/k3s-FFC61C?style=for-the-badge&logo=k3s&logoColor=black)![](https://img.shields.io/badge/Helm-0F1689?style=for-the-badge&logo=helm&logoColor=white)![](https://img.shields.io/badge/AWS_EC2-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white)![](https://img.shields.io/badge/Amazon_ECR-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white)![](https://img.shields.io/badge/Nginx_Ingress-009639?style=for-the-badge&logo=nginx&logoColor=white)  
 ![](https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)![](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)![](https://img.shields.io/badge/Kaniko-4285F4?style=for-the-badge)![](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)![](https://img.shields.io/badge/Amazon_RDS_(PostgreSQL)-527FFF?style=for-the-badge&logo=amazonrds&logoColor=white)![](https://img.shields.io/badge/DynamoDB-4053D6?style=for-the-badge&logo=amazondynamodb&logoColor=white)![](https://img.shields.io/badge/Flyway-CC0200?style=for-the-badge&logo=flyway&logoColor=white)  
-![](https://img.shields.io/badge/Cloudflare_Tunnel-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)![](https://img.shields.io/badge/CloudWatch-FF4F8B?style=for-the-badge&logo=amazoncloudwatch&logoColor=white)![](https://img.shields.io/badge/Fluent_Bit-49BDA5?style=for-the-badge&logo=fluentbit&logoColor=white)![](https://img.shields.io/badge/Let's_Encrypt-003A70?style=for-the-badge&logo=letsencrypt&logoColor=white)
+![](https://img.shields.io/badge/Cloudflare_Tunnel-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)![](https://img.shields.io/badge/Cloudflare_Workers-F38020?style=for-the-badge&logo=cloudflareworkers&logoColor=white)![](https://img.shields.io/badge/CloudWatch-FF4F8B?style=for-the-badge&logo=amazoncloudwatch&logoColor=white)![](https://img.shields.io/badge/Fluent_Bit-49BDA5?style=for-the-badge&logo=fluentbit&logoColor=white)![](https://img.shields.io/badge/Let's_Encrypt-003A70?style=for-the-badge&logo=letsencrypt&logoColor=white)
 
 ---
 
@@ -18,7 +18,7 @@ GitHub URL + 인증 정보 입력
 → DB 준비 · 마이그레이션 자동 적용
 → 블루-그린 / 카나리 트래픽 전환 (CD · LB)
 → 카나리 판정 통과 시 전환 완료, 에러율 · 응답 시간 악화 시 자동 롤백
-→ HTTPS 접속 URL 반환 (https://{app}.apps.lilycloud.kr)
+→ HTTPS 접속 URL 반환 (https://{app}.lilycloud.kr)
 → 로그 수집 · 메트릭 대시보드
 ```
 
@@ -32,6 +32,7 @@ GitHub URL + 인증 정보 입력
 | **무중단 재배포**           | 공개 주소. 판정이 끝나기 전까지는 이전 슬롯이 계속 트래픽을 받음                         | Ready 이후 30초간 새 슬롯과 이전 슬롯의 에러율·p95를 비교하고, 통과하면 Service selector만 새 색으로 바꿈. 실패하면 새 버전을 지우고 이번 배포에서 바꾼 스키마를 되돌림 |
 | **클라우드 버스팅**          | 공개 주소와 터널                                                     | 로컬 동시 처리 한도를 넘긴 요청만 클라우드로 넘어감. 실측 1,714건 모두 200, 그중 40%를 클라우드가 처리, 부하 종료 20초 뒤 PC로 복귀                         |
 | **클라우드와 온프레미스 거점 전환** | 공개 주소. 목적지가 준비되기 전까지는 출발 거점이 트래픽을 받음                          | 주소가 가리키는 거점 전체. CNAME 대상만 바꿈                                                                                  |
+| **내 PC 장애 전환**        | 공개 주소. PC가 응답하지 못한 요청만 클라우드로 감 | 엣지 Worker가 같은 요청을 클라우드 대기 Pod로 다시 보냄. PC 에이전트 30초 정지 중 GET 모두 200, 전환 순간 최장 4.0초. 60초 넘게 끊기면 CNAME도 ALB로 바꿈 |
 | **온프레미스**             | 인바운드 포트는 닫힌 상태로 둠. 인증서 개인키와 AI 키는 PC에 두지 않음. 빌더 서버는 소스를 받지 않음 | 에이전트가 WebSocket으로 먼저 연결하고, clone·빌드는 특권 권한 없이 worker 노드의 Kaniko가 수행함                                          |
 | **AI**                | 배포와 롤백은 규칙이 결정함                                               | 규칙으로 분류되지 않는 실패와 설정 키만 모델에 물음. 호출이 실패하면 규칙 결과를 유지하고, 사용자 값과 DB 비밀번호는 보내지 않음                                   |
 
@@ -75,7 +76,7 @@ GitHub URL + 인증 정보 입력
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **카나리 · 롤백** | 새 버전이 Ready가 되어도 바로 100%로 넘기지 않음. 30초 동안 새 슬롯과 이전 슬롯의 에러율 · p95를 비교하고, 통과하면 Service selector만 새 색으로 변경함. 실패하면 새 버전을 지우고 스키마를 되돌리며, 트래픽은 이전 색에 남김. 이미 넘긴 뒤에는 이전 슬롯을 다시 띄워 복귀시킴. |
 | **버스팅**      | 거점이 사용자 PC일 때, 로컬이 동시에 처리하는 요청이 한도를 넘으면 그 요청만 클라우드로 넘김. 공개 주소는 터널에 그대로 있고, 부하가 끝나면 다시 PC가 받음.                                                                                  |
-| **거점 전환**    | 같은 주소의 트래픽 전체를 PC와 클라우드 중 한쪽으로 옮김. 버스팅(요청 일부)이나 블루-그린(한 거점 안의 버전 교체)과는 다름. CNAME 내용물만 바꾸고, 목적지가 준비되기 전에는 출발 거점을 유지함.                                                           |
+| **거점 전환**    | 같은 주소의 트래픽 전체를 PC와 클라우드 중 한쪽으로 옮김. 버스팅(요청 일부)이나 블루-그린(한 거점 안의 버전 교체)과는 다름. CNAME 내용물만 바꾸고, 목적지가 준비되기 전에는 출발 거점을 유지함. DB도 옮기도록 고르면 출발 쪽 쓰기를 멈추고(프록시 503) 내 PC DB와 RDS 사이에서 복사한 뒤 주소를 바꿈.                                                           |
 | **모니터링**     | 앱 코드를 고치지 않고 입구에서 관측함. 요청 지표와 슬롯 · 버전이 붙은 로그를 모아, 앱마다 지금 괜찮은지를 색과 한 줄로 알림.                                                                                                     |
 
 
@@ -113,6 +114,7 @@ flowchart LR
 | 카나리 판정   | 기존 버전 그대로       | 새 버전을 지우고 스키마를 되돌림. 트래픽은 이전 색에 남음             |
 | 전환 이후 장애 | 잠깐의 오류 뒤 이전 버전  | 이전 슬롯을 다시 띄워 트래픽을 복귀시킴                        |
 | 내 PC 과부하 | 응답은 계속 200      | 넘친 요청만 클라우드로 보내고, 부하가 끝나면 PC로 복귀함             |
+| 내 PC 정지 | GET은 수 초 안에 클라우드가 응답 | 버스팅 대기 Pod가 있는 앱은 엣지 Worker가 클라우드로 다시 보냄. 60초 넘게 끊기면 CNAME을 ALB로 바꿈. DB가 PC에 있는 앱은 이어받지 못함 |
 
 
 
@@ -126,6 +128,11 @@ flowchart LR
 | 2026-09-30 | 재배포 (blue → green)                                                                      | 같은 DB 재사용, 데이터 유지                                   |
 | 2026-09-30 | 처음 보는 앱 이름(`blog2`) 배포                                                                  | ECR 저장소 자동 생성부터 접속까지 한 번에 성공                        |
 |            | 내 PC 거점 버스팅                                                                             | 1,714건 모두 200, 그중 40%를 클라우드가 처리, 부하 종료 20초 뒤 PC로 복귀 |
+| 2026-10-02 | 내 PC 앱 DB 위치 (내 PC PostgreSQL · MySQL, 기존 DB, 클라우드 RDS) | 세 방식 모두 배포 성공, 클라우드 대기 Pod는 역방향 터널로 PC DB에 붙음. 잘못된 기존 DB 주소는 배포 전에 거절, 비밀번호는 로그에 남지 않음 |
+| 2026-10-02 | 클라우드 비율 50% 수동 분배                                                                    | 40건 중 17건을 클라우드가 처리 |
+| 2026-10-02 | PC 에이전트 정지, CNAME 자동 전환만 사용                                                         | 63초 뒤 CNAME → ALB, 74초부터 공개 주소 200, 클라우드 레플리카 2/2 |
+| 2026-10-02 | PC 에이전트 30초 정지(`docker pause`), 엣지 Worker 사용, 0.25초 간격 GET                         | 31건 · 34건 모두 200, 전환 순간 최장 3.8초 · 4.0초. Worker 적용 전에는 41건 중 22건 502 |
+| 2026-10-02 | 에이전트 안의 RDS 터널(`ssh -L`) 강제 종료                                                        | 약 1.2초 뒤 다시 열림, 앱 API 200 |
 
 
 
@@ -138,8 +145,9 @@ flowchart LR
 | 클러스터     | k3s — server 1대(관리) + worker 2대(앱 실행), AWS EC2 t3.medium             |
 | 트래픽      | Nginx Ingress — 카나리 · 블루-그린 트래픽 전환                                   |
 | 이미지      | Kaniko 빌드 → Amazon ECR (내 PC는 로컬 Docker 빌드, 레지스트리 없음)                |
-| 온프레미스 노출 | Cloudflare Tunnel — 인바운드 포트 없이 공개 주소 연결, 인증서는 Cloudflare 엣지          |
-| 데이터      | 플랫폼 DB: DynamoDB / 사용자 앱 DB: Amazon RDS (PostgreSQL)                 |
+| 온프레미스 노출 | Cloudflare Tunnel — 인바운드 포트 없이 공개 주소 연결, 인증서는 Cloudflare 엣지. PC 장애 시 Cloudflare Worker(`lily-edge`)가 `{app}-cloud.lilycloud.kr`(ALB)로 다시 보냄 |
+| 데이터      | 플랫폼 DB: DynamoDB / 사용자 앱 DB: Amazon RDS (PostgreSQL). 내 PC 앱은 PC의 DB 컨테이너(PostgreSQL · MySQL)나 사용자가 쓰던 DB도 고를 수 있음 |
+| DB 터널    | lily-server의 `lily-tunnel` 계정. 에이전트는 플랫폼 SSH CA가 서명한 인증서로 RDS 포트 포워딩(`ssh -L`)이나, 인증서에 적힌 포트 하나의 역방향 포워딩(`ssh -R`, PC DB → 클라우드 대기 Pod)만 열 수 있음 |
 | 비밀 정보    | 테넌트 DB 비밀번호는 SSM Parameter Store(SecureString), 사용자 PC에는 AI 키를 두지 않음 |
 | 관측       | CloudWatch Agent(지표) · Fluent Bit(로그) → Amazon CloudWatch            |
 
@@ -179,6 +187,7 @@ flowchart LR
 | ------------- | ----------------------- | --------------------------------------------------- |
 | `lily-jev` 연결 | builder의 코드 결함 판정에만 연결됨 | 빌드 파일이 여럿일 때 대상 고르기, DB 엔진이 둘 다 보일 때 고르기, 롤백 직전 재확인 |
 | 공개 랜딩의 배포 시연  | 6단계 흐름을 보여주는 연출임        | 실제 배포 API와 연결                                       |
+| 엣지 비율 분배      | 비율 슬라이더는 PC 프록시가 나눔. 모든 요청이 PC를 거침 | Worker가 엣지에서 비율대로 PC와 클라우드에 나눔 |
 
 
 
