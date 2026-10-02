@@ -93,16 +93,16 @@ flowchart LR
 | **Monitoring System** | 요청 지표 · 슬롯 / 버전 로그 기반 앱 상태 시각화 | 심형규, 최도일 |
 | **Load Balancing** | Nginx 기반 트래픽 분산 (다수 컨테이너 운영으로 비용 효율화) | 이도현, 차주혜 |
 
-## 확장 계획 (AI)
+## AI가 하는 일
 
-기본 모듈이 동작한 뒤 여유가 되는 만큼 추가해요. 첫 단계로 `lily-jev`가 규칙만으로 애매한 선택을 짧게 물어봐요.
+규칙은 먼저 적용해요. 규칙으로 정하기 어려운 것만 모델에 묻고, 키가 없거나 호출이 실패하면 배포를 막지 않고 규칙 결과를 유지해요.
 
-- **AI 장애 분석** — 오류 로그를 AI 에이전트에 넘겨 원인 범위를 좁히고, 비개발자도 이해할 수 있게 설명
-- **빠른 분류 모델 결합** — 배포 파이프라인의 예/아니오 판단(에러 여부, 롤백 여부 등)을 경량 분류 모델로 빠르게 처리
-- **AI 수정 PR** — 분석 결과를 바탕으로 AI 에이전트가 수정본을 GitHub PR로 제안
-- **맞춤 대시보드** — 배포된 서비스의 도메인을 분석해 필요한 메트릭 패널을 자동 구성
-- **권한 분리** — 서비스별 접근 권한, 운영 서버 배포 승인자 지정
-- 서브도메인 제공, manifest 자동화
+- **설정 분류 · 실패 진단** — `lily-builder`의 `AiAdvisor`. Claude 키가 있으면 Claude, 없고 OpenAI 키가 있으면 OpenAI. 사용자 값과 DB 비밀번호는 보내지 않아요. 코드 수정이 필요하면 고칠 목록은 비우고 원인만 적어요.
+- **애매한 선택만** — `lily-jev`는 확신도가 높을 때만 답을 돌려주고, 실패하면 빈 값이에요. 요청마다 나누는 버스팅, 슬롯 비율, DB 생성, 화면 전달에는 넣지 않아요.
+
+롤백은 직전 슬롯으로 트래픽을 되돌리는 호출이고, 그 호출이 레포에 수정 PR을 만들지는 않아요.
+
+기록은 [결정 기록](결정-기록.md), 모듈이 주고받는 경로는 [모듈 계약](모듈-계약.md)에 있어요.
 
 ## Repositories
 
@@ -113,12 +113,12 @@ flowchart LR
 | [`lily-frontend`](https://github.com/SoftBank-team-lily/lily-frontend) | 로그인 · 프로젝트 · 클라우드 / 내 PC 배포 화면. 버스팅 비율과 거점 전환도 여기서 조작해요. |
 | [`lily-monitoring-dashboard`](https://github.com/SoftBank-team-lily/lily-monitoring-dashboard) | 앱별 관측 화면. 요청 수 · 5xx 비율 · p95 · 파드 상태 · 카나리 비중 · 실행 로그. |
 | [`lily-on-premise`](https://github.com/SoftBank-team-lily/lily-on-premise) | 사용자 PC 에이전트. 로컬 블루-그린, 버스팅, 거점 전환. 인바운드 포트를 열지 않고 WebSocket으로 먼저 붙어요. |
-| [`lily-db-provisioner`](https://github.com/SoftBank-team-lily/lily-db-provisioner) | 프로젝트마다 RDS database와 계정을 만들어요. |
-| [`lily-loadbalancer`](https://github.com/SoftBank-team-lily/lily-loadbalancer) | Nginx Ingress 매니페스트. Host로 앱을 나누고, selector로 블루-그린을 골라요. |
-| [`lily-observer`](https://github.com/SoftBank-team-lily/lily-observer) | 요청 지표 · 버전 붙은 로그 · 위험도 판정 API. |
-| [`lily-jev`](https://github.com/SoftBank-team-lily/lily-jev) | 빌드 대상, DB 엔진, 롤백 직전처럼 규칙만으로 애매한 선택을 짧게 물어요. |
+| lily-db-provisioner | 프로젝트마다 RDS database와 계정을 만들어요. 공개 페이지가 없어 링크는 뺐어요. |
+| lily-loadbalancer | Nginx Ingress 매니페스트. Host로 앱을 나누고, selector로 블루-그린을 골라요. 공개 페이지가 없어 링크는 뺐어요. |
+| lily-observer | 요청 지표 · 버전 붙은 로그 · 위험도 판정 API. 공개 페이지가 없어 링크는 뺐어요. |
+| [`lily-jev`](https://github.com/SoftBank-team-lily/lily-jev) | 애매한 선택만 짧게 묻는 클라이언트. 실패하거나 확신도가 낮으면 빈 값을 돌려주고, 호출한 쪽은 규칙을 유지해요. |
 | [`lily-blog-sample`](https://github.com/SoftBank-team-lily/lily-blog-sample) | 배포 대상 샘플 앱 — 플랫폼 검증용 블로그 CRUD (Spring Boot), 장애 주입 엔드포인트 포함 |
-| [`lily-load-test`](https://github.com/SoftBank-team-lily/lily-load-test) | 시연 확인. 배포가 공개 주소까지 열리는지, 버스팅이 클라우드로 넘겼다가 돌아오는지. |
+| lily-load-test | 시연 확인. 배포가 공개 주소까지 열리는지, 버스팅이 클라우드로 넘겼다가 돌아오는지. 공개 페이지가 없어 링크는 뺐어요. |
 | [`.github`](https://github.com/SoftBank-team-lily/.github) | 이 소개 페이지 |
 
 ## Team
