@@ -10,7 +10,16 @@ SoftBank Hackathon 2026 in Korea 예선 (Term1)
 
 ---
 
-Vercel처럼 GitHub 주소와 인증 정보만 넣으면, 플랫폼이 레포를 클론해 배포하고 **HTTPS가 적용된 접속 URL**을 돌려줌. 배포 위치는 k3s 클러스터(클라우드)와 사용자 PC(온프레미스) 중에서 선택 가능함.
+Vercel처럼 GitHub 주소와 인증 정보만 넣으면, 플랫폼이 레포를 클론해 배포하고 **HTTPS가 적용된 접속 URL**을 돌려줌. 프로젝트를 만들 때 배포 모드를 고른다. 만든 뒤에는 바꾸지 않는다.
+
+| | 경로 | DB | 버스팅 | 거점 전환 | PC 가 꺼지면 |
+| --- | --- | --- | --- | --- | --- |
+| **하이브리드 · 클라우드** | Cloudflare → ALB → k3s | AWS RDS | 거점이 클라우드라 해당 없음 | CNAME 만 바꿈 | 이미 클라우드 |
+| **하이브리드 · 내 PC · RDS** | Cloudflare → 터널 → PC. 넘친 요청만 k3s | PC 는 `ssh -L`, 대기 Pod 는 RDS 직접 | 있음 | CNAME 만 바꿈 | 대기 Pod 가 이어받음 |
+| **하이브리드 · 내 PC · 로컬/기존 DB** | Cloudflare → 터널 → PC. 넘친 요청만 k3s | `lily-postgres`·`lily-mysql` 또는 사용자 DB. 대기 Pod 는 `ssh -R` | 있음. PC 가 꺼지면 DB 도 끊김 | PostgreSQL 이면 데이터 이전 후 CNAME | 서비스가 멈춤 |
+| **온프레미스 전용** | Cloudflare → 터널 → PC | PC 의 `lily-postgres` 또는 `lily-mysql`. 역방향 터널 없음 | 없음 | 없음 | 서비스가 멈춤. TLS 는 Cloudflare 에서 끝남 |
+
+하이브리드 안에서 고르는 클라우드/내 PC 는 거점이다. DB 가 RDS 이면 거점 전환은 CNAME 만 바꾼다. 내 PC 거점은 로컬 DB 와 기존 DB 도 고를 수 있고, 그때 대기 Pod 는 역방향 터널로 같은 DB 를 본다. 온프레미스 전용은 DB 를 PC 컨테이너로 고정하고 버스팅과 거점 전환을 거절한다. 기존 프로젝트는 하이브리드다.
 
 ```
 GitHub URL + 인증 정보 입력
