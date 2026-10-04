@@ -1,0 +1,38 @@
+# Gradle(Java) 레포 공용 테스트. 각 레포는 아래처럼 부른다.
+#
+#   jobs:
+#     test:
+#       uses: SoftBank-team-lily/.github/.github/workflows/java-ci.yml@main
+#       with:
+#         gradle-task: check        # 기본 test. 커버리지 검사까지 하려면 check
+name: java-ci
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        type: string
+        default: "21"
+      gradle-task:
+        type: string
+        default: test
+      working-directory:
+        description: 레포 안의 Gradle 프로젝트 위치
+        type: string
+        default: .
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+          cache: gradle
+      - name: gradle ${{ inputs.gradle-task }}
+        run: bash ./gradlew ${{ inputs.gradle-task }} --no-daemon

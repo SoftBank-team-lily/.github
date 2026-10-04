@@ -1,0 +1,117 @@
+# 공용 이미지 빌드 → Amazon ECR 푸시. 각 레포는 아래처럼 부른다.
+#
+#   jobs:
+#     image:
+#       needs: test
+#       permissions:
+#         contents: read
+#         id-token: write                  # OIDC 로 AWS 역할을 빌린다
+#       uses: SoftBank-team-lily/.github/.github/workflows/build-and-push.yml@main
+#       with:
+#         image: lily-router                # ECR 저장소 이름. 없으면 만든다
+#         role-arn: ${{ vars.AWS_ROLE_ARN }}
+#
+# 인증은 OIDC 가 기본이다 (GitHub 에 오래 살아 있는 AWS 키를 두지 않는다).
+# role-arn 을 비우면 AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY Secret 으로 대신한다 (secrets: inherit).
+#
+# 태그: 커밋 SHA 앞 12자리. 기본 브랜치 push 면 latest 도 단다. push: false 면 빌드만 한다 (PR 확인용).
+name: build-and-push
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: ECR 저장소 이름
+        type: string
+        required: true
+      context:
+        type: string
+        default: .
+      dockerfile:
+        description: context 기준 경로
+        type: string
+        default: Dockerfile
+      push:
+        type: boolean
+        default: true
+      aws-region:
+        type: string
+        default: ap-northeast-2
+      role-arn:
+        description: OIDC 로 빌릴 IAM 역할 ARN. 비우면 액세스 키 Secret 을 쓴다
+        type: string
+        default: ""
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        required: false
+    outputs:
+      image:
+        description: 푸시한 이미지 (레지스트리/저장소:SHA)
+        value: ${{ jobs.build.outputs.image }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      image: ${{ steps.tags.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: AWS 인증 (OIDC)
+        if: inputs.push && inputs.role-arn != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.role-arn }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: AWS 인증 (액세스 키)
+        if: inputs.push && inputs.role-arn == ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - id: ecr
+        if: inputs.push
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: ECR 저장소가 없으면 만든다
+        if: inputs.push
+        env:
+          REPOSITORY: ${{ inputs.image }}
+        run: |
+          aws ecr describe-repositories --repository-names "$REPOSITORY" >/dev/null 2>&1 \
+            || aws ecr create-repository --repository-name "$REPOSITORY" >/dev/null
+
+      - name: 태그 정하기
+        id: tags
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry || 'local' }}
+          REPOSITORY: ${{ inputs.image }}
+          LATEST: ${{ github.ref_name == github.event.repository.default_branch && github.event_name == 'push' }}
+        run: |
+          IMAGE="$REGISTRY/$REPOSITORY:${GITHUB_SHA::12}"
+          TAGS="$IMAGE"
+          if [ "$LATEST" = "true" ]; then TAGS="$TAGS,$REGISTRY/$REPOSITORY:latest"; fi
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.context }}/${{ inputs.dockerfile }}
+          push: ${{ inputs.push }}
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=${{ inputs.image }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.image }}
+
+      - name: 결과
+        run: echo "### ${{ inputs.push && 'pushed' || 'built (no push)' }} \`${{ steps.tags.outputs.image }}\`" >> "$GITHUB_STEP_SUMMARY"
