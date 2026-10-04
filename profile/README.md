@@ -43,6 +43,7 @@ GitHub URL + 인증 정보 입력
 | **클라우드와 온프레미스 거점 전환** | 공개 주소. 목적지가 준비되기 전까지는 출발 거점이 트래픽을 받음                          | 주소가 가리키는 거점 전체. CNAME 대상만 바꿈                                                                                  |
 | **내 PC 장애 전환**        | 공개 주소. PC가 응답하지 못한 요청만 클라우드로 감 | 엣지 Worker가 같은 요청을 클라우드 대기 Pod로 다시 보냄. PC를 멈추거나 꺼도 1.4~1.9초 안에 클라우드가 응답, 실패 0건. 60초 넘게 끊기면 CNAME도 ALB로 바꿈 |
 | **PC 장애 중 읽기·쓰기 유지** | DB가 PC에 있어 클라우드가 이어받지 못하는 앱도 공개 주소가 응답함 | 평소 PC가 준 공개 GET 응답을 엣지 Cache API에 사본으로 두고, 장애 중에는 그 사본으로 200. 장애 중 POST는 앱별 Durable Object에 암호화해 쌓고 202, PC가 돌아오면 받은 순서대로 다시 보냄. 배포 화면 체크박스로 켜고 끔 (기본 둘 다 켜짐) |
+| **멀티클라우드 (AWS + GCP)** | 공개 주소와 DB. DB는 GCP Cloud SQL 하나이고 AWS 쪽 Pod는 DB 릴레이로 같은 DB를 씀 | 한 번 빌드해 두 클러스터에 띄우고, 엣지 Worker가 요청마다 화면에서 정한 비율로 GCP와 AWS에 나눔. 한쪽이 받지 못하면 GET은 다른 쪽으로 다시 보냄. 실측 비율 65%에 200건 중 132건이 GCP, 한쪽 앱이나 클라우드를 끊어도 GET 실패 0건 |
 | **온프레미스**             | 인바운드 포트는 닫힌 상태로 둠. 인증서 개인키와 AI 키는 PC에 두지 않음. 빌더 서버는 소스를 받지 않음 | 에이전트가 WebSocket으로 먼저 연결하고, clone·빌드는 특권 권한 없이 worker 노드의 Kaniko가 수행함                                          |
 | **AI**                | 배포와 롤백은 규칙이 결정함                                               | 규칙으로 분류되지 않는 실패와 설정 키만 모델에 물음. 호출이 실패하면 규칙 결과를 유지하고, 사용자 값과 DB 비밀번호는 보내지 않음                                   |
 
@@ -127,6 +128,7 @@ flowchart LR
 | 배포 도중 엔진 중단 | 기존 버전 그대로 | 앱별 Lease로 동시 배포를 막고, 스키마만 바뀐 채 멈췄으면 되돌림 |
 | 내 PC 과부하 | 응답은 계속 200      | 넘친 요청만 클라우드로 보내고, 부하가 끝나면 PC로 복귀함             |
 | PC 재부팅 · 에이전트 재시작 | 같은 주소로 계속 응답 | 앱 컨테이너는 다시 뜨고, 에이전트가 슬롯 · DB 터널 · 버스팅을 다시 붙임 |
+| 한쪽 클라우드 장애 (AWS + GCP 앱) | 응답은 계속 200 | 엣지 Worker가 받지 못한 쪽(연결 실패·530, GET은 502/503/504까지)을 10초 건너뛰고 다른 클라우드로 보냄. 쓰기는 두 번 처리될 수 있어 다시 보내지 않음 |
 | 내 PC 정지 | GET은 1~2초 안에 클라우드가 응답 | 버스팅 대기 Pod가 있는 앱은 엣지 Worker가 클라우드로 다시 보냄. 60초 넘게 끊기면 CNAME을 ALB로 바꿈. DB가 PC에 있는 앱은 엣지의 읽기 사본(Cache API)으로 GET에 200, POST는 Durable Object에 쌓고 202 → PC가 돌아오면 순서대로 반영 |
 
 
@@ -147,6 +149,9 @@ flowchart LR
 | 2026-10-02 | PC 에이전트 30초 정지(`docker pause`), 엣지 Worker 사용, 0.25초 간격 GET                         | 31건 · 34건 모두 200, 전환 순간 최장 3.8초 · 4.0초. Worker 적용 전에는 41건 중 22건 502 |
 | 2026-10-02 | PC 에이전트 멈춤 · 정상 종료 5회, 서울 리전에서 0.2초 간격 GET | 매회 실패 0건, 전환 1.4~1.9초 (헤더 시간 제한 1.5초) |
 | 2026-10-02 | 에이전트 안의 RDS 터널(`ssh -L`) 강제 종료                                                        | 약 1.2초 뒤 다시 열림, 앱 API 200 |
+| 2026-10-04 | AWS + GCP 앱, 화면 슬라이더로 비율 변경 | 50%·80%·65%에서 측정 분배가 각각 22:18, 31:9, 132:68(GCP:AWS). 헤더가 AWS인 37건이 AWS ingress 로그에도 37건 |
+| 2026-10-04 | AWS + GCP 앱의 한쪽 장애 (앱 Pod 0, 별칭 CNAME을 없는 대상으로) | GET 100~160건 모두 200, 전부 남은 쪽이 처리. POST는 클라우드 접속 불가 때 20/20, 앱만 내려갔을 때 첫 1~2건만 503 |
+| 2026-10-04 | AWS + GCP 앱의 pgroll 스키마 변경과 롤백 | 배포 중 쓰기 60건 모두 반영, 두 클러스터가 같은 버전 스키마로 넘어가고, 롤백 뒤 행 유지 |
 | 2026-10-04 | 로컬 DB 앱의 PC 에이전트 정지 (읽기 사본·쓰기 보관 켬), 정지 15초 뒤 GET·POST | GET은 사본으로 200, POST 2건 모두 202. 장애 중 재전송 0번, PC 복구 8~14초 뒤 PC DB에 받은 순서대로 한 번씩 반영. 둘 다 끄면 GET 503, POST는 쌓이지 않음 |
 
 
@@ -157,11 +162,12 @@ flowchart LR
 
 | 구성       | 내용                                                                   |
 | -------- | -------------------------------------------------------------------- |
-| 클러스터     | k3s — server 1대(관리) + worker 2대(앱 실행), AWS EC2 t3.medium             |
+| 클러스터     | k3s — server 1대(관리) + worker 2대(앱 실행), AWS EC2 t3.medium. GCP에도 같은 구성의 k3s와 lily-cicd · 프로비저너 (`lily-db-provisioner/infra/gcp`) |
 | 트래픽      | Nginx Ingress — 카나리 · 블루-그린 트래픽 전환                                   |
 | 이미지      | Kaniko 빌드 → Amazon ECR (내 PC는 로컬 Docker 빌드, 레지스트리 없음)                |
 | 온프레미스 노출 | Cloudflare Tunnel — 인바운드 포트 없이 공개 주소 연결, 인증서는 Cloudflare 엣지. PC 장애 시 Cloudflare Worker(`lily-edge`)가 `{app}-cloud.lilycloud.kr`(ALB)로 다시 보내고, 공개 GET은 Cache API 사본으로, POST는 Durable Object(SQLite) 쓰기 큐로 버팀 |
-| 데이터      | 플랫폼 DB: DynamoDB / 사용자 앱 DB: Amazon RDS (PostgreSQL). 내 PC 앱은 PC의 DB 컨테이너(PostgreSQL · MySQL)나 사용자가 쓰던 DB도 고를 수 있음 |
+| 멀티클라우드 | AWS + GCP 앱은 Artifact Registry와 ECR에 같은 이미지를 올리고 두 클러스터에 배포. DB는 Cloud SQL 하나이고, AWS 클러스터의 `db-relay-gcp`가 GCP 배스천으로 `ssh -L`을 열어 둠 (인증서는 builder가 6시간마다 다시 서명) |
+| 데이터      | 플랫폼 DB: DynamoDB / 사용자 앱 DB: Amazon RDS (PostgreSQL), GCP 앱은 Cloud SQL. 내 PC 앱은 PC의 DB 컨테이너(PostgreSQL · MySQL)나 사용자가 쓰던 DB도 고를 수 있음 |
 | DB 터널    | lily-server의 `lily-tunnel` 계정. 에이전트는 플랫폼 SSH CA가 서명한 인증서로 RDS 포트 포워딩(`ssh -L`)이나, 인증서에 적힌 포트 하나의 역방향 포워딩(`ssh -R`, PC DB → 클라우드 대기 Pod)만 열 수 있음 |
 | 비밀 정보    | 테넌트 DB 비밀번호는 SSM Parameter Store(SecureString), 사용자 PC에는 AI 키를 두지 않음 |
 | 관측       | CloudWatch Agent(지표) · Fluent Bit(로그) → Amazon CloudWatch            |
