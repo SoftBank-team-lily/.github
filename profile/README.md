@@ -1,7 +1,7 @@
 # 🌷 Team Lily
 
-**GitHub 레포 URL 하나로 빌드부터 배포, 트래픽 전환, 모니터링까지 자동으로 처리하는 배포 플랫폼**  
-클라우드와 내 PC를 오가도, 넘치는 요청만 나눠 받아도 **공개 주소는 그대로**  
+**AWS · GCP · 온프레미스 사이에서 앱과 DB를 함께 옮기고, 장애가 나면 다른 환경이 이어받는 배포 플랫폼**  
+실행 환경을 바꿀 때는 DB를 복사하고 검증한 뒤 공개 주소를 전환하고, 운영 중 어느 한쪽이 멈추면 엣지에서 살아 있는 환경으로 요청을 넘겨 서비스와 데이터를 이어 갑니다.  
 SoftBank Hackathon 2026 in Korea 예선 (Term1)
 
 ![](https://img.shields.io/badge/k3s-FFC61C?style=for-the-badge&logo=k3s&logoColor=black)![](https://img.shields.io/badge/Helm-0F1689?style=for-the-badge&logo=helm&logoColor=white)![](https://img.shields.io/badge/AWS_EC2-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white)![](https://img.shields.io/badge/Amazon_ECR-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white)![](https://img.shields.io/badge/Nginx_Ingress-009639?style=for-the-badge&logo=nginx&logoColor=white)  
