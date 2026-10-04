@@ -16,8 +16,8 @@ Vercel처럼 GitHub 주소와 인증 정보만 넣으면, 플랫폼이 레포를
 | --- | --- | --- | --- | --- | --- |
 | **하이브리드 · 클라우드** | Cloudflare → ALB → k3s | AWS RDS | 거점이 클라우드라 해당 없음 | CNAME 만 바꿈 | 이미 클라우드 |
 | **하이브리드 · 내 PC · RDS** | Cloudflare → 터널 → PC. 넘친 요청만 k3s | PC 는 `ssh -L`, 대기 Pod 는 RDS 직접 | 있음 | CNAME 만 바꿈 | 대기 Pod 가 이어받음 |
-| **하이브리드 · 내 PC · 로컬/기존 DB** | Cloudflare → 터널 → PC. 넘친 요청만 k3s | `lily-postgres`·`lily-mysql` 또는 사용자 DB. 대기 Pod 는 `ssh -R` | 있음. PC 가 꺼지면 DB 도 끊김 | PostgreSQL 이면 데이터 이전 후 CNAME | 서비스가 멈춤 |
-| **온프레미스 전용** | Cloudflare → 터널 → PC | PC 의 `lily-postgres` 또는 `lily-mysql`. 역방향 터널 없음 | 없음 | 없음 | 서비스가 멈춤. TLS 는 Cloudflare 에서 끝남 |
+| **하이브리드 · 내 PC · 로컬/기존 DB** | Cloudflare → 터널 → PC. 넘친 요청만 k3s | `lily-postgres`·`lily-mysql` 또는 사용자 DB. 대기 Pod 는 `ssh -R` | 있음. PC 가 꺼지면 DB 도 끊김 | PostgreSQL 이면 데이터 이전 후 CNAME | 앱은 멈춤. 읽기 사본·쓰기 보관을 켜면 공개 GET 은 엣지 사본으로 200, POST 는 쓰기 큐에 쌓였다가 PC 복구 후 순서대로 반영 |
+| **온프레미스 전용** | Cloudflare → 터널 → PC | PC 의 `lily-postgres` 또는 `lily-mysql`. 역방향 터널 없음 | 없음 | 없음 | 앱은 멈춤. 읽기 사본·쓰기 보관을 켜면 공개 GET 은 엣지 사본으로 200, POST 는 쓰기 큐에 쌓였다가 PC 복구 후 순서대로 반영. TLS 는 Cloudflare 에서 끝남 |
 
 하이브리드 안에서 고르는 클라우드/내 PC 는 거점이다. DB 가 RDS 이면 거점 전환은 CNAME 만 바꾼다. 내 PC 거점은 로컬 DB 와 기존 DB 도 고를 수 있고, 그때 대기 Pod 는 역방향 터널로 같은 DB 를 본다. 온프레미스 전용은 DB 를 PC 컨테이너로 고정하고 버스팅과 거점 전환을 거절한다. 기존 프로젝트는 하이브리드다.
 
